@@ -37,7 +37,32 @@ CREATE INDEX IF NOT EXISTS idx_watchlist_ttl_priority
 """
 
 
+_AUTHOR_PROFILE_DDL = """
+CREATE TABLE IF NOT EXISTS author_profile (
+    author_hash VARCHAR PRIMARY KEY,
+    first_seen_time BIGINT DEFAULT 0,
+    last_seen_time BIGINT DEFAULT 0,
+    comment_count INTEGER DEFAULT 0,
+    story_count INTEGER DEFAULT 0,
+    spam_score DOUBLE DEFAULT 0.0,
+    bot_likelihood DOUBLE DEFAULT 0.0,
+    influence_cap_state VARCHAR DEFAULT 'normal'
+);
+"""
+
+_MODERATION_FLAG_DDL = """
+CREATE TABLE IF NOT EXISTS moderation_flag (
+    item_id INTEGER PRIMARY KEY,
+    status VARCHAR DEFAULT 'clean',
+    reason VARCHAR,
+    flagged_at BIGINT DEFAULT 0
+);
+"""
+
+
 def init_schema(conn: duckdb.DuckDBPyConnection) -> None:
     """Create all tables and indexes if they don't exist."""
     conn.execute(_HN_ITEM_DDL)
     conn.execute(_WATCHLIST_DDL)
+    conn.execute(_AUTHOR_PROFILE_DDL)
+    conn.execute(_MODERATION_FLAG_DDL)
