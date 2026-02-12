@@ -60,9 +60,22 @@ CREATE TABLE IF NOT EXISTS moderation_flag (
 """
 
 
+_OPINION_SIGNAL_DDL = """
+CREATE TABLE IF NOT EXISTS opinion_signal (
+    item_id INTEGER PRIMARY KEY,
+    valence DOUBLE DEFAULT 0.0,
+    intensity DOUBLE DEFAULT 0.0,
+    confidence DOUBLE DEFAULT 0.0,
+    label VARCHAR DEFAULT 'neutral',
+    model_version VARCHAR DEFAULT ''
+);
+"""
+
+
 def init_schema(conn: duckdb.DuckDBPyConnection) -> None:
     """Create all tables and indexes if they don't exist."""
     conn.execute(_HN_ITEM_DDL)
     conn.execute(_WATCHLIST_DDL)
     conn.execute(_AUTHOR_PROFILE_DDL)
     conn.execute(_MODERATION_FLAG_DDL)
+    conn.execute(_OPINION_SIGNAL_DDL)
