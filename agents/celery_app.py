@@ -1,6 +1,7 @@
 from celery import Celery
 
 from agents.config import AgentConfig
+from agents.supervisor.schedule import BEAT_SCHEDULE
 
 config = AgentConfig()
 
@@ -13,4 +14,5 @@ app.conf.update(
     result_serializer="json",
     timezone="UTC",
     enable_utc=True,
+    beat_schedule=BEAT_SCHEDULE,
 )
