@@ -4,7 +4,7 @@ import pytest
 from libs.hn_clients.firebase import FirebaseHNClient
 
 
-def _mock_transport(payload: object) -> httpx.MockTransport:  # type: ignore[type-arg]
+def _mock_transport(payload: object) -> httpx.MockTransport:
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json=payload)
 
