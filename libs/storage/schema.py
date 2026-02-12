@@ -28,8 +28,8 @@ _WATCHLIST_DDL = """
 CREATE TABLE IF NOT EXISTS watchlist (
     story_id INTEGER PRIMARY KEY,
     priority_score DOUBLE DEFAULT 0.0,
-    ttl_expires INTEGER DEFAULT 0,
-    last_fetched INTEGER
+    ttl_expires BIGINT DEFAULT 0,
+    last_fetched BIGINT
 );
 
 CREATE INDEX IF NOT EXISTS idx_watchlist_ttl_priority
