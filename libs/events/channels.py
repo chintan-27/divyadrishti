@@ -1,0 +1,8 @@
+HN_DISCOVERY = "hn.discovery"
+HN_CONTENT = "hn.content"
+NLP_OPINION = "nlp.opinion"
+NLP_EMBEDDING = "nlp.embedding"
+METRIC_MAPPING = "metric.mapping"
+METRIC_GARDENING = "metric.gardening"
+METRIC_ROLLUPS = "metric.rollups"
+MODERATION_UI = "moderation.ui"
