@@ -108,6 +108,31 @@ CREATE INDEX IF NOT EXISTS idx_item_metric_edge_node ON item_metric_edge (node_i
 """
 
 
+_METRIC_ROLLUP_DDL = """
+CREATE TABLE IF NOT EXISTS metric_rollup (
+    node_id VARCHAR,
+    "window" VARCHAR,
+    bucket_start BIGINT,
+    presence DOUBLE DEFAULT 0.0,
+    sentiment_positive DOUBLE DEFAULT 0.0,
+    sentiment_negative DOUBLE DEFAULT 0.0,
+    sentiment_neutral DOUBLE DEFAULT 0.0,
+    valence_score DOUBLE DEFAULT 0.0,
+    split_score DOUBLE DEFAULT 0.0,
+    consensus_pos DOUBLE DEFAULT 0.0,
+    consensus_neg DOUBLE DEFAULT 0.0,
+    heat_score DOUBLE DEFAULT 0.0,
+    momentum DOUBLE DEFAULT 0.0,
+    unique_authors INTEGER DEFAULT 0,
+    thread_count INTEGER DEFAULT 0,
+    PRIMARY KEY (node_id, "window", bucket_start)
+);
+
+CREATE INDEX IF NOT EXISTS idx_metric_rollup_node_window
+    ON metric_rollup (node_id, "window");
+"""
+
+
 def init_schema(conn: duckdb.DuckDBPyConnection) -> None:
     """Create all tables and indexes if they don't exist."""
     conn.execute(_HN_ITEM_DDL)
@@ -118,3 +143,4 @@ def init_schema(conn: duckdb.DuckDBPyConnection) -> None:
     conn.execute(_EMBEDDING_DDL)
     conn.execute(_METRIC_NODE_DDL)
     conn.execute(_ITEM_METRIC_EDGE_DDL)
+    conn.execute(_METRIC_ROLLUP_DDL)
