@@ -15,4 +15,11 @@ app.conf.update(
     timezone="UTC",
     enable_utc=True,
     beat_schedule=BEAT_SCHEDULE,
+    task_acks_late=True,
+    task_reject_on_worker_lost=True,
+    task_default_retry_delay=10,
+    task_annotations={
+        "*": {"max_retries": 3, "retry_backoff": True, "retry_backoff_max": 120},
+    },
+    worker_concurrency=1,
 )
