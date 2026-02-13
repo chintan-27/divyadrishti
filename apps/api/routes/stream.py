@@ -45,3 +45,28 @@ async def _trending_generator(request: Request) -> AsyncGenerator[str]:
 @router.get("/trending")
 async def stream_trending(request: Request) -> EventSourceResponse:
     return EventSourceResponse(_trending_generator(request))
+
+
+async def _metrics_generator(request: Request) -> AsyncGenerator[str]:
+    while True:
+        if await request.is_disconnected():
+            break
+        rows = _conn().execute(
+            'SELECT node_id, "window", presence, valence_score, heat_score, momentum '
+            'FROM metric_rollup WHERE "window" = \'today\' '
+            "ORDER BY presence DESC LIMIT 20"
+        ).fetchall()
+        data = [
+            {
+                "node_id": r[0], "window": r[1], "presence": r[2],
+                "valence_score": r[3], "heat_score": r[4], "momentum": r[5],
+            }
+            for r in rows
+        ]
+        yield json.dumps(data)
+        await asyncio.sleep(5)
+
+
+@router.get("/metrics")
+async def stream_metrics(request: Request) -> EventSourceResponse:
+    return EventSourceResponse(_metrics_generator(request))
