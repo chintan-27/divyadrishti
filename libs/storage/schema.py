@@ -72,6 +72,42 @@ CREATE TABLE IF NOT EXISTS opinion_signal (
 """
 
 
+_EMBEDDING_DDL = """
+CREATE TABLE IF NOT EXISTS embedding (
+    item_id INTEGER PRIMARY KEY,
+    embedding FLOAT[384],
+    model_version VARCHAR DEFAULT ''
+);
+"""
+
+_METRIC_NODE_DDL = """
+CREATE TABLE IF NOT EXISTS metric_node (
+    node_id VARCHAR PRIMARY KEY,
+    label VARCHAR DEFAULT '',
+    definition VARCHAR DEFAULT '',
+    centroid FLOAT[384],
+    parent_id VARCHAR,
+    status VARCHAR DEFAULT 'active',
+    version INTEGER DEFAULT 1,
+    health_stats VARCHAR DEFAULT '{}'
+);
+
+CREATE INDEX IF NOT EXISTS idx_metric_node_status ON metric_node (status);
+"""
+
+_ITEM_METRIC_EDGE_DDL = """
+CREATE TABLE IF NOT EXISTS item_metric_edge (
+    item_id INTEGER,
+    node_id VARCHAR,
+    weight DOUBLE DEFAULT 0.0,
+    created_at BIGINT DEFAULT 0,
+    PRIMARY KEY (item_id, node_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_item_metric_edge_node ON item_metric_edge (node_id);
+"""
+
+
 def init_schema(conn: duckdb.DuckDBPyConnection) -> None:
     """Create all tables and indexes if they don't exist."""
     conn.execute(_HN_ITEM_DDL)
@@ -79,3 +115,6 @@ def init_schema(conn: duckdb.DuckDBPyConnection) -> None:
     conn.execute(_AUTHOR_PROFILE_DDL)
     conn.execute(_MODERATION_FLAG_DDL)
     conn.execute(_OPINION_SIGNAL_DDL)
+    conn.execute(_EMBEDDING_DDL)
+    conn.execute(_METRIC_NODE_DDL)
+    conn.execute(_ITEM_METRIC_EDGE_DDL)
