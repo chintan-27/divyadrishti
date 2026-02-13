@@ -4,7 +4,13 @@ from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, HTTPException
 
-from libs.schemas.api_responses import MetricNodeResponse, MetricExampleResponse
+from libs.schemas.api_responses import (
+    MetricDetailResponse,
+    MetricExampleResponse,
+    MetricNodeResponse,
+    RollupResponse,
+)
+from libs.storage.metric_rollup_repository import MetricRollupRepository
 
 if TYPE_CHECKING:
     import duckdb
@@ -46,8 +52,8 @@ def top_metrics(limit: int = 20) -> list[MetricNodeResponse]:
     ]
 
 
-@router.get("/{node_id}", response_model=MetricNodeResponse)
-def get_metric(node_id: str) -> MetricNodeResponse:
+@router.get("/{node_id}", response_model=MetricDetailResponse)
+def get_metric(node_id: str, window: str = "today") -> MetricDetailResponse:
     row = _conn().execute(
         "SELECT m.node_id, m.label, m.definition, m.status, "
         "COUNT(e.item_id) as item_count "
@@ -59,10 +65,31 @@ def get_metric(node_id: str) -> MetricNodeResponse:
     ).fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Metric node not found")
-    return MetricNodeResponse(
+
+    rollup_repo = MetricRollupRepository(_conn())
+    latest = rollup_repo.get_latest(node_id, window)
+    latest_resp = None
+    if latest:
+        latest_resp = RollupResponse(**latest.model_dump())
+
+    return MetricDetailResponse(
         node_id=row[0], label=row[1], definition=row[2],
-        status=row[3], item_count=row[4],
+        status=row[3], item_count=row[4], latest_rollup=latest_resp,
     )
+
+
+@router.get("/{node_id}/series", response_model=list[RollupResponse])
+def get_metric_series(
+    node_id: str, window: str = "hour", start: int = 0, end: int = 0,
+) -> list[RollupResponse]:
+    import time as _time
+    if end == 0:
+        end = int(_time.time())
+    if start == 0:
+        start = end - 86400 * 7  # default 7 days
+    rollup_repo = MetricRollupRepository(_conn())
+    series = rollup_repo.get_series(node_id, window, start, end)
+    return [RollupResponse(**r.model_dump()) for r in series]
 
 
 @router.get("/{node_id}/examples", response_model=list[MetricExampleResponse])
