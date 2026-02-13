@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 import duckdb
 from fastapi import FastAPI
 
-from apps.api.routes import health, metrics, stories, stream
+from apps.api.routes import health, metrics, rankings, stories, stream
 from libs.storage.schema import init_schema
 
 if TYPE_CHECKING:
@@ -20,6 +20,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     stories.set_db(conn)
     stream.set_db(conn)
     metrics.set_db(conn)
+    rankings.set_db(conn)
     yield
     conn.close()
 
@@ -29,3 +30,4 @@ app.include_router(health.router)
 app.include_router(stories.router)
 app.include_router(stream.router)
 app.include_router(metrics.router)
+app.include_router(rankings.router)
