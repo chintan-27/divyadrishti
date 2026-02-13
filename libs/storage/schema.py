@@ -133,6 +133,15 @@ CREATE INDEX IF NOT EXISTS idx_metric_rollup_node_window
 """
 
 
+_BACKFILL_STATE_DDL = """
+CREATE TABLE IF NOT EXISTS backfill_state (
+    "key" VARCHAR PRIMARY KEY,
+    value VARCHAR DEFAULT '',
+    updated_at BIGINT DEFAULT 0
+);
+"""
+
+
 def init_schema(conn: duckdb.DuckDBPyConnection) -> None:
     """Create all tables and indexes if they don't exist."""
     conn.execute(_HN_ITEM_DDL)
@@ -144,3 +153,4 @@ def init_schema(conn: duckdb.DuckDBPyConnection) -> None:
     conn.execute(_METRIC_NODE_DDL)
     conn.execute(_ITEM_METRIC_EDGE_DDL)
     conn.execute(_METRIC_ROLLUP_DDL)
+    conn.execute(_BACKFILL_STATE_DDL)
