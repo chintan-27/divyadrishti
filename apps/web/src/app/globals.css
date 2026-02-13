@@ -1,0 +1,27 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
+@layer base {
+  body {
+    @apply bg-surface text-gray-100 antialiased;
+  }
+}
+
+@layer components {
+  .nav-link {
+    @apply px-3 py-2 text-sm font-medium text-gray-400 transition-colors
+      hover:text-white rounded-md hover:bg-surface-raised;
+  }
+
+  .nav-link-active {
+    @apply text-white bg-surface-raised;
+  }
+
+  .card {
+    @apply bg-surface-raised border border-gray-800 rounded-xl p-5
+      transition-all hover:border-gray-700 hover:shadow-lg hover:shadow-black/20;
+  }
+}
