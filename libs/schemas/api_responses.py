@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class HealthResponse(BaseModel):
@@ -24,12 +24,47 @@ class CommentResponse(BaseModel):
     parent: int | None = None
 
 
+# --- Metric responses (aligned with frontend types) ---
+
+class SentimentResponse(BaseModel):
+    positive: float = 0.0
+    negative: float = 0.0
+    neutral: float = 0.0
+
+
 class MetricNodeResponse(BaseModel):
-    node_id: str
+    """Matches frontend MetricNode interface."""
+    id: str
     label: str = ""
     definition: str = ""
-    status: str = "active"
+    presence_pct: float = 0.0
+    valence: float = 0.0
+    heat: float = 0.0
+    momentum: float = 0.0
+    sentiment: SentimentResponse = Field(default_factory=SentimentResponse)
     item_count: int = 0
+
+
+class RollupDataResponse(BaseModel):
+    """Matches frontend RollupData interface."""
+    window: str = "today"
+    presence_pct: float = 0.0
+    valence: float = 0.0
+    heat: float = 0.0
+    momentum: float = 0.0
+    split: float = 0.0
+    consensus: float = 0.0
+    unique_authors: int = 0
+    sentiment: SentimentResponse = Field(default_factory=SentimentResponse)
+
+
+class MetricDetailResponse(BaseModel):
+    """Matches frontend MetricDetail interface."""
+    id: str
+    label: str = ""
+    definition: str = ""
+    rollup: RollupDataResponse = Field(default_factory=RollupDataResponse)
+    example_items: list[StoryResponse] = Field(default_factory=list)
 
 
 class MetricExampleResponse(BaseModel):
@@ -39,6 +74,13 @@ class MetricExampleResponse(BaseModel):
     weight: float = 0.0
 
 
+class RankingEntryResponse(BaseModel):
+    """Matches frontend RankingEntry interface."""
+    rank: int
+    metric: MetricNodeResponse
+
+
+# Keep internal rollup response for /series endpoint
 class RollupResponse(BaseModel):
     node_id: str
     window: str
@@ -57,10 +99,10 @@ class RollupResponse(BaseModel):
     thread_count: int = 0
 
 
-class MetricDetailResponse(BaseModel):
-    node_id: str
-    label: str = ""
-    definition: str = ""
-    status: str = "active"
-    item_count: int = 0
-    latest_rollup: RollupResponse | None = None
+class SeriesPointResponse(BaseModel):
+    """Matches frontend SeriesPoint interface."""
+    ts: str
+    presence_pct: float = 0.0
+    valence: float = 0.0
+    heat: float = 0.0
+    momentum: float = 0.0

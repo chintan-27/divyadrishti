@@ -48,8 +48,7 @@ def test_garden_metrics():
         emb_repo.upsert(Embedding(item_id=i, embedding=vec))
 
     wrapper = _ConnWrapper(conn)
-    with patch("agents.metric_gardener.tasks.duckdb") as mock_duckdb:
-        mock_duckdb.connect.return_value = wrapper
+    with patch("agents.metric_gardener.tasks.get_worker_conn", return_value=wrapper):
         count = garden_metrics(n_clusters=3)
 
     assert count >= 2  # at least 2 clusters with enough items
@@ -75,8 +74,7 @@ def test_garden_metrics_too_few_embeddings():
         emb_repo.upsert(Embedding(item_id=i, embedding=[0.1] * 384))
 
     wrapper = _ConnWrapper(conn)
-    with patch("agents.metric_gardener.tasks.duckdb") as mock_duckdb:
-        mock_duckdb.connect.return_value = wrapper
+    with patch("agents.metric_gardener.tasks.get_worker_conn", return_value=wrapper):
         count = garden_metrics()
 
     assert count == 0

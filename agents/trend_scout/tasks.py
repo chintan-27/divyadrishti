@@ -3,16 +3,14 @@ from __future__ import annotations
 import asyncio
 import time
 
-import duckdb
 from redis import Redis
 
-from agents.celery_app import app
+from agents.celery_app import app, get_worker_conn
 from agents.config import AgentConfig
 from libs.events.channels import HN_DISCOVERY
 from libs.events.publisher import EventPublisher
 from libs.hn_clients.algolia import AlgoliaHNClient
 from libs.schemas.watchlist import WatchlistEntry
-from libs.storage.schema import init_schema
 from libs.storage.watchlist_repository import WatchlistRepository
 
 _TTL_SECONDS = 7200  # 2 hours
@@ -32,8 +30,7 @@ async def _fetch_front_page(client: AlgoliaHNClient) -> list[dict[str, object]]:
 def discover_trending() -> int:
     """Discover trending HN stories and upsert into watchlist."""
     config = AgentConfig()
-    conn = duckdb.connect(config.db_path)
-    init_schema(conn)
+    conn = get_worker_conn()
     repo = WatchlistRepository(conn)
     redis = Redis.from_url(config.redis_url)
     publisher = EventPublisher(redis)

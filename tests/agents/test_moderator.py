@@ -19,8 +19,7 @@ def test_moderate_items():
     repo.upsert(HNItem(id=3, type="comment", text_clean="kys lol"))
 
     wrapper = _ConnWrapper(conn)
-    with patch("agents.moderator.tasks.duckdb") as mock_duckdb:
-        mock_duckdb.connect.return_value = wrapper
+    with patch("agents.moderator.tasks.get_worker_conn", return_value=wrapper):
         count = moderate_items()
 
     assert count == 3

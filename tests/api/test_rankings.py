@@ -1,9 +1,11 @@
 import duckdb
 from fastapi.testclient import TestClient
 
+from apps.api.db import set_db
 from apps.api.main import app
-from apps.api.routes import metrics, rankings, stories, stream
+from libs.schemas.metric_node import MetricNode
 from libs.schemas.metric_rollup import MetricRollup
+from libs.storage.metric_node_repository import MetricNodeRepository
 from libs.storage.metric_rollup_repository import MetricRollupRepository
 from libs.storage.schema import init_schema
 
@@ -11,10 +13,7 @@ from libs.storage.schema import init_schema
 def _setup():
     conn = duckdb.connect(":memory:")
     init_schema(conn)
-    stories.set_db(conn)
-    stream.set_db(conn)
-    metrics.set_db(conn)
-    rankings.set_db(conn)
+    set_db(conn)
     return conn, TestClient(app)
 
 
@@ -28,6 +27,9 @@ def test_rankings_empty():
 
 def test_rankings_top():
     conn, client = _setup()
+    node_repo = MetricNodeRepository(conn)
+    node_repo.upsert(MetricNode(node_id="n1", label="AI", centroid=[0.1] * 384))
+    node_repo.upsert(MetricNode(node_id="n2", label="Rust", centroid=[0.2] * 384))
     repo = MetricRollupRepository(conn)
     repo.upsert(MetricRollup(
         node_id="n1", window="today", bucket_start=1000,
@@ -40,12 +42,16 @@ def test_rankings_top():
     resp = client.get("/rankings?window=today&lens=top")
     data = resp.json()
     assert len(data) == 2
-    assert data[0]["node_id"] == "n1"  # higher presence
+    assert data[0]["rank"] == 1
+    assert data[0]["metric"]["id"] == "n1"  # higher presence
     conn.close()
 
 
 def test_rankings_heated():
     conn, client = _setup()
+    node_repo = MetricNodeRepository(conn)
+    node_repo.upsert(MetricNode(node_id="n1", label="AI", centroid=[0.1] * 384))
+    node_repo.upsert(MetricNode(node_id="n2", label="Rust", centroid=[0.2] * 384))
     repo = MetricRollupRepository(conn)
     repo.upsert(MetricRollup(
         node_id="n1", window="today", bucket_start=1000, heat_score=10.0,
@@ -55,5 +61,5 @@ def test_rankings_heated():
     ))
     resp = client.get("/rankings?window=today&lens=heated")
     data = resp.json()
-    assert data[0]["node_id"] == "n2"  # higher heat
+    assert data[0]["metric"]["id"] == "n2"  # higher heat
     conn.close()

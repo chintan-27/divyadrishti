@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import duckdb
 
@@ -20,9 +20,6 @@ class _ConnWrapper:
     def close(self) -> None:
         pass  # no-op so tests can verify after
 
-    def real_close(self) -> None:
-        self._conn.close()
-
 
 def test_normalize_items():
     conn = duckdb.connect(":memory:")
@@ -33,8 +30,7 @@ def test_normalize_items():
     repo.upsert(HNItem(id=3, type="comment", text_clean="already clean"))
 
     wrapper = _ConnWrapper(conn)
-    with patch("agents.normalizer.tasks.duckdb") as mock_duckdb:
-        mock_duckdb.connect.return_value = wrapper
+    with patch("agents.normalizer.tasks.get_worker_conn", return_value=wrapper):
         count = normalize_items()
 
     assert count == 2
@@ -55,8 +51,7 @@ def test_normalize_items_skips_empty():
     repo.upsert(HNItem(id=1, type="comment", text=""))
 
     wrapper = _ConnWrapper(conn)
-    with patch("agents.normalizer.tasks.duckdb") as mock_duckdb:
-        mock_duckdb.connect.return_value = wrapper
+    with patch("agents.normalizer.tasks.get_worker_conn", return_value=wrapper):
         count = normalize_items()
 
     assert count == 0

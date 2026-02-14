@@ -4,17 +4,15 @@ import asyncio
 import time
 from typing import Any
 
-import duckdb
 from redis import Redis
 
-from agents.celery_app import app
+from agents.celery_app import app, get_worker_conn
 from agents.config import AgentConfig
 from libs.events.channels import HN_CONTENT
 from libs.events.publisher import EventPublisher
 from libs.hn_clients.firebase import FirebaseHNClient
 from libs.schemas.hn_item import HNItem
 from libs.storage.hn_item_repository import HNItemRepository
-from libs.storage.schema import init_schema
 from libs.storage.watchlist_repository import WatchlistRepository
 from libs.utils.hashing import hash_author
 
@@ -69,8 +67,7 @@ async def _fetch_tree(
 def harvest_threads(limit: int = 10) -> int:
     """Fetch watchlist stories + comment trees and store in hn_item."""
     config = AgentConfig()
-    conn = duckdb.connect(config.db_path)
-    init_schema(conn)
+    conn = get_worker_conn()
     repo = HNItemRepository(conn)
     watchlist = WatchlistRepository(conn)
     redis = Redis.from_url(config.redis_url)

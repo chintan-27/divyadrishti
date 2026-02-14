@@ -49,8 +49,7 @@ def test_compute_rollups():
         ))
 
     wrapper = _ConnWrapper(conn)
-    with patch("agents.rollup_accountant.tasks.duckdb") as mock_duckdb:
-        mock_duckdb.connect.return_value = wrapper
+    with patch("agents.rollup_accountant.tasks.get_worker_conn", return_value=wrapper):
         count = compute_rollups()
 
     assert count > 0

@@ -9,6 +9,7 @@ from libs.schemas.watchlist import WatchlistEntry
 from libs.storage.hn_item_repository import HNItemRepository
 from libs.storage.schema import init_schema
 from libs.storage.watchlist_repository import WatchlistRepository
+from tests.agents.test_normalizer import _ConnWrapper
 
 
 def test_item_from_raw():
@@ -40,12 +41,12 @@ def test_harvest_threads():
     async def mock_get_item(item_id):
         return {100: story_raw, 101: comment_raw}.get(item_id)
 
+    wrapper = _ConnWrapper(conn)
     with (
-        patch("agents.thread_harvester.tasks.duckdb") as mock_duckdb,
+        patch("agents.thread_harvester.tasks.get_worker_conn", return_value=wrapper),
         patch("agents.thread_harvester.tasks.Redis") as mock_redis_cls,
         patch("agents.thread_harvester.tasks.FirebaseHNClient") as mock_fb_cls,
     ):
-        mock_duckdb.connect.return_value = conn
         mock_redis_cls.from_url.return_value = redis
 
         mock_client = AsyncMock()

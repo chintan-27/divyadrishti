@@ -2,16 +2,13 @@ from __future__ import annotations
 
 import uuid
 
-import duckdb
 import numpy as np
 from sklearn.cluster import MiniBatchKMeans
 
-from agents.celery_app import app
-from agents.config import AgentConfig
+from agents.celery_app import app, get_worker_conn
 from agents.metric_gardener.labeling import generate_label
 from libs.schemas.metric_node import MetricNode
 from libs.storage.metric_node_repository import MetricNodeRepository
-from libs.storage.schema import init_schema
 
 _MIN_EMBEDDINGS = 20
 _MAX_CLUSTERS = 50
@@ -20,9 +17,7 @@ _MAX_CLUSTERS = 50
 @app.task(name="metric_gardener.garden_metrics")
 def garden_metrics(n_clusters: int | None = None) -> int:
     """Cluster embeddings to discover/update metric nodes."""
-    config = AgentConfig()
-    conn = duckdb.connect(config.db_path)
-    init_schema(conn)
+    conn = get_worker_conn()
     node_repo = MetricNodeRepository(conn)
 
     try:

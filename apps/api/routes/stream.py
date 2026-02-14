@@ -8,35 +8,31 @@ from fastapi import APIRouter
 from sse_starlette.sse import EventSourceResponse
 from starlette.requests import Request
 
+from apps.api.db import get_conn, is_test_conn
+
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
 
-    import duckdb
-
 router = APIRouter(prefix="/stream", tags=["stream"])
 
-_db_conn: duckdb.DuckDBPyConnection | None = None
 
-
-def set_db(conn: duckdb.DuckDBPyConnection) -> None:
-    global _db_conn  # noqa: PLW0603
-    _db_conn = conn
-
-
-def _conn() -> duckdb.DuckDBPyConnection:
-    if _db_conn is None:
-        raise RuntimeError("Database not initialized")
-    return _db_conn
+def _query_and_close(sql: str) -> list:
+    conn = get_conn()
+    try:
+        return conn.execute(sql).fetchall()
+    finally:
+        if not is_test_conn():
+            conn.close()
 
 
 async def _trending_generator(request: Request) -> AsyncGenerator[str]:
     while True:
         if await request.is_disconnected():
             break
-        rows = _conn().execute(
+        rows = _query_and_close(
             'SELECT id, title, score FROM hn_item WHERE "type" = \'story\' '
             "ORDER BY score DESC NULLS LAST LIMIT 10"
-        ).fetchall()
+        )
         data = [{"id": r[0], "title": r[1], "score": r[2]} for r in rows]
         yield json.dumps(data)
         await asyncio.sleep(5)
@@ -51,11 +47,11 @@ async def _metrics_generator(request: Request) -> AsyncGenerator[str]:
     while True:
         if await request.is_disconnected():
             break
-        rows = _conn().execute(
+        rows = _query_and_close(
             'SELECT node_id, "window", presence, valence_score, heat_score, momentum '
             'FROM metric_rollup WHERE "window" = \'today\' '
             "ORDER BY presence DESC LIMIT 20"
-        ).fetchall()
+        )
         data = [
             {
                 "node_id": r[0], "window": r[1], "presence": r[2],

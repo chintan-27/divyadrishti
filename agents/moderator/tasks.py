@@ -2,22 +2,16 @@ from __future__ import annotations
 
 import time
 
-import duckdb
-
-from agents.celery_app import app
-from agents.config import AgentConfig
+from agents.celery_app import app, get_worker_conn
 from libs.schemas.moderation_flag import ModerationFlag
 from libs.storage.moderation_flag_repository import ModerationFlagRepository
-from libs.storage.schema import init_schema
 from libs.utils.moderation import check_offensive, redact_pii
 
 
 @app.task(name="moderator.moderate_items")
 def moderate_items(batch_size: int = 100) -> int:
     """Scan text_clean for PII and offensive content."""
-    config = AgentConfig()
-    conn = duckdb.connect(config.db_path)
-    init_schema(conn)
+    conn = get_worker_conn()
     repo = ModerationFlagRepository(conn)
 
     try:

@@ -7,6 +7,7 @@ import fakeredis
 from agents.trend_scout.tasks import _compute_priority, discover_trending
 from libs.storage.schema import init_schema
 from libs.storage.watchlist_repository import WatchlistRepository
+from tests.agents.test_normalizer import _ConnWrapper
 
 
 def test_compute_priority():
@@ -21,7 +22,6 @@ def test_compute_priority_missing_fields():
 def test_discover_trending_upserts_watchlist():
     conn = duckdb.connect(":memory:")
     init_schema(conn)
-    repo = WatchlistRepository(conn)
     redis = fakeredis.FakeRedis()
 
     mock_hits = [
@@ -29,12 +29,12 @@ def test_discover_trending_upserts_watchlist():
         {"objectID": "200", "points": 100, "num_comments": 20},
     ]
 
+    wrapper = _ConnWrapper(conn)
     with (
-        patch("agents.trend_scout.tasks.duckdb") as mock_duckdb,
+        patch("agents.trend_scout.tasks.get_worker_conn", return_value=wrapper),
         patch("agents.trend_scout.tasks.Redis") as mock_redis_cls,
         patch("agents.trend_scout.tasks.AlgoliaHNClient") as mock_algolia_cls,
     ):
-        mock_duckdb.connect.return_value = conn
         mock_redis_cls.from_url.return_value = redis
 
         mock_client = AsyncMock()
@@ -46,16 +46,13 @@ def test_discover_trending_upserts_watchlist():
 
     assert count == 2
 
-    # re-open connection to check persisted data (task closes conn in finally)
-    conn2 = duckdb.connect(":memory:")
-    # The in-memory DB is gone after close, so just verify via redis events
     messages = redis.xrange("hn.discovery")
     assert len(messages) == 2
     data = json.loads(messages[0][1][b"data"])
     assert data["action"] == "discovered"
     ids = {json.loads(m[1][b"data"])["story_id"] for m in messages}
     assert ids == {100, 200}
-    conn2.close()
+    conn.close()
 
 
 def test_discover_trending_skips_missing_id():
@@ -65,12 +62,12 @@ def test_discover_trending_skips_missing_id():
 
     mock_hits = [{"points": 50}]  # no objectID
 
+    wrapper = _ConnWrapper(conn)
     with (
-        patch("agents.trend_scout.tasks.duckdb") as mock_duckdb,
+        patch("agents.trend_scout.tasks.get_worker_conn", return_value=wrapper),
         patch("agents.trend_scout.tasks.Redis") as mock_redis_cls,
         patch("agents.trend_scout.tasks.AlgoliaHNClient") as mock_algolia_cls,
     ):
-        mock_duckdb.connect.return_value = conn
         mock_redis_cls.from_url.return_value = redis
 
         mock_client = AsyncMock()

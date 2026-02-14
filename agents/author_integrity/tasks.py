@@ -1,12 +1,8 @@
 from __future__ import annotations
 
-import duckdb
-
-from agents.celery_app import app
-from agents.config import AgentConfig
+from agents.celery_app import app, get_worker_conn
 from libs.schemas.author_profile import AuthorProfile
 from libs.storage.author_profile_repository import AuthorProfileRepository
-from libs.storage.schema import init_schema
 
 _BOT_COMMENT_RATE_THRESHOLD = 50  # comments per hour average
 
@@ -25,9 +21,7 @@ def _compute_bot_likelihood(comment_count: int, story_count: int,
 @app.task(name="author_integrity.update_author_profiles")
 def update_author_profiles(batch_size: int = 200) -> int:
     """Compute author profiles from hn_item data."""
-    config = AgentConfig()
-    conn = duckdb.connect(config.db_path)
-    init_schema(conn)
+    conn = get_worker_conn()
     repo = AuthorProfileRepository(conn)
 
     try:

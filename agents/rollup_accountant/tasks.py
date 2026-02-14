@@ -2,10 +2,7 @@ from __future__ import annotations
 
 import time
 
-import duckdb
-
-from agents.celery_app import app
-from agents.config import AgentConfig
+from agents.celery_app import app, get_worker_conn
 from agents.rollup_accountant.formulas import (
     compute_consensus,
     compute_heat,
@@ -15,7 +12,6 @@ from agents.rollup_accountant.formulas import (
 from libs.schemas.metric_rollup import MetricRollup
 from libs.storage.metric_node_repository import MetricNodeRepository
 from libs.storage.metric_rollup_repository import MetricRollupRepository
-from libs.storage.schema import init_schema
 
 _WINDOWS = {
     "hour": 3600,
@@ -31,9 +27,7 @@ _INFLUENCE_CAP = 5  # max items per author per node per window
 @app.task(name="rollup_accountant.compute_rollups")
 def compute_rollups() -> int:
     """Compute metric rollups for all active nodes across all windows."""
-    config = AgentConfig()
-    conn = duckdb.connect(config.db_path)
-    init_schema(conn)
+    conn = get_worker_conn()
     node_repo = MetricNodeRepository(conn)
     rollup_repo = MetricRollupRepository(conn)
 

@@ -1,21 +1,15 @@
 from __future__ import annotations
 
-import duckdb
-
-from agents.celery_app import app
-from agents.config import AgentConfig
+from agents.celery_app import app, get_worker_conn
 from libs.nlp.sentiment import get_model
 from libs.schemas.opinion_signal import OpinionSignal
 from libs.storage.opinion_signal_repository import OpinionSignalRepository
-from libs.storage.schema import init_schema
 
 
 @app.task(name="opinion_analyst.analyze_opinions")
 def analyze_opinions(batch_size: int = 50) -> int:
     """Run sentiment analysis on items with text_clean but no opinion_signal."""
-    config = AgentConfig()
-    conn = duckdb.connect(config.db_path)
-    init_schema(conn)
+    conn = get_worker_conn()
     repo = OpinionSignalRepository(conn)
 
     try:

@@ -20,11 +20,9 @@ def test_backfill_stories():
 
     wrapper = _ConnWrapper(conn)
     with (
-        patch("agents.trend_scout.backfill.duckdb") as mock_duckdb,
+        patch("agents.trend_scout.backfill.get_worker_conn", return_value=wrapper),
         patch("agents.trend_scout.backfill.AlgoliaHNClient") as mock_algolia_cls,
     ):
-        mock_duckdb.connect.return_value = wrapper
-
         mock_client = AsyncMock()
         mock_client.search_by_date.return_value = mock_hits
         mock_client.close = AsyncMock()
@@ -58,11 +56,9 @@ def test_backfill_stories_resumes():
 
     wrapper = _ConnWrapper(conn)
     with (
-        patch("agents.trend_scout.backfill.duckdb") as mock_duckdb,
+        patch("agents.trend_scout.backfill.get_worker_conn", return_value=wrapper),
         patch("agents.trend_scout.backfill.AlgoliaHNClient") as mock_algolia_cls,
     ):
-        mock_duckdb.connect.return_value = wrapper
-
         mock_client = AsyncMock()
         mock_client.search_by_date.return_value = [{"objectID": "300", "points": 10}]
         mock_client.close = AsyncMock()

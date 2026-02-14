@@ -1,19 +1,13 @@
 from __future__ import annotations
 
-import duckdb
-
-from agents.celery_app import app
-from agents.config import AgentConfig
-from libs.storage.schema import init_schema
+from agents.celery_app import app, get_worker_conn
 from libs.utils.text_clean import clean_hn_html, content_hash
 
 
 @app.task(name="normalizer.normalize_items")
 def normalize_items(batch_size: int = 100) -> int:
     """Clean text for items that have raw text but no text_clean."""
-    config = AgentConfig()
-    conn = duckdb.connect(config.db_path)
-    init_schema(conn)
+    conn = get_worker_conn()
 
     try:
         rows = conn.execute(

@@ -1,8 +1,8 @@
 import duckdb
 from fastapi.testclient import TestClient
 
+from apps.api.db import set_db
 from apps.api.main import app
-from apps.api.routes import metrics, stories, stream
 from libs.schemas.hn_item import HNItem
 from libs.schemas.item_metric_edge import ItemMetricEdge
 from libs.schemas.metric_node import MetricNode
@@ -15,9 +15,7 @@ from libs.storage.schema import init_schema
 def _setup():
     conn = duckdb.connect(":memory:")
     init_schema(conn)
-    stories.set_db(conn)
-    stream.set_db(conn)
-    metrics.set_db(conn)
+    set_db(conn)
     return conn, TestClient(app)
 
 
@@ -47,7 +45,7 @@ def test_top_metrics():
     assert resp.status_code == 200
     data = resp.json()
     assert len(data) == 2
-    assert data[0]["node_id"] == "n1"  # most items
+    assert data[0]["id"] == "n1"  # most items
     assert data[0]["item_count"] == 2
     conn.close()
 

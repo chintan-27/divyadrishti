@@ -2,17 +2,13 @@ from __future__ import annotations
 
 import time
 
-import duckdb
-
-from agents.celery_app import app
-from agents.config import AgentConfig
+from agents.celery_app import app, get_worker_conn
 from libs.nlp.embeddings import cosine_similarity, get_model, softmax_weights
 from libs.schemas.embedding import Embedding
 from libs.schemas.item_metric_edge import ItemMetricEdge
 from libs.storage.embedding_repository import EmbeddingRepository
 from libs.storage.item_metric_edge_repository import ItemMetricEdgeRepository
 from libs.storage.metric_node_repository import MetricNodeRepository
-from libs.storage.schema import init_schema
 
 _TOP_K = 5
 _MIN_WEIGHT = 0.12
@@ -21,9 +17,7 @@ _MIN_WEIGHT = 0.12
 @app.task(name="metric_mapper.map_items_to_metrics")
 def map_items_to_metrics(batch_size: int = 50) -> int:
     """Embed items and map them to metric nodes."""
-    config = AgentConfig()
-    conn = duckdb.connect(config.db_path)
-    init_schema(conn)
+    conn = get_worker_conn()
     emb_repo = EmbeddingRepository(conn)
     node_repo = MetricNodeRepository(conn)
     edge_repo = ItemMetricEdgeRepository(conn)

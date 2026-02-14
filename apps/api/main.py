@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+import os
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING
 
@@ -7,6 +9,8 @@ import duckdb
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from apps.api import scheduler
+from apps.api.db import set_db_path
 from apps.api.middleware import RequestLoggingMiddleware
 from apps.api.routes import health, metrics, rankings, stories, stream
 from libs.storage.schema import init_schema
@@ -14,17 +18,27 @@ from libs.storage.schema import init_schema
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
 
+logger = logging.getLogger(__name__)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
-    conn = duckdb.connect("divyadrishti.duckdb")
-    init_schema(conn)
-    stories.set_db(conn)
-    stream.set_db(conn)
-    metrics.set_db(conn)
-    rankings.set_db(conn)
+    db_path = "divyadrishti.duckdb"
+    # Bootstrap schema if DB doesn't exist yet
+    if not os.path.exists(db_path):
+        tmp = duckdb.connect(db_path)
+        init_schema(tmp)
+        tmp.close()
+    set_db_path(db_path)
+
+    # Start background agent tasks in-process
+    scheduler.start()
+    logger.info("Background scheduler started")
+
     yield
-    conn.close()
+
+    scheduler.stop()
+    logger.info("Background scheduler stopped")
 
 
 app = FastAPI(title="divyadrishti", lifespan=lifespan)

@@ -1,33 +1,17 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import duckdb
+from fastapi import APIRouter, Depends, HTTPException
 
-from fastapi import APIRouter, HTTPException
-
+from apps.api.db import get_db
 from libs.schemas.api_responses import CommentResponse, StoryResponse
-
-if TYPE_CHECKING:
-    import duckdb
 
 router = APIRouter(prefix="/stories", tags=["stories"])
 
-_db_conn: duckdb.DuckDBPyConnection | None = None
-
-
-def set_db(conn: duckdb.DuckDBPyConnection) -> None:
-    global _db_conn  # noqa: PLW0603
-    _db_conn = conn
-
-
-def _conn() -> duckdb.DuckDBPyConnection:
-    if _db_conn is None:
-        raise RuntimeError("Database not initialized")
-    return _db_conn
-
 
 @router.get("/trending", response_model=list[StoryResponse])
-def trending(limit: int = 30) -> list[StoryResponse]:
-    rows = _conn().execute(
+def trending(limit: int = 30, conn: duckdb.DuckDBPyConnection = Depends(get_db)) -> list[StoryResponse]:
+    rows = conn.execute(
         'SELECT id, title, url, score, "by", "time", descendants, "type" '
         'FROM hn_item WHERE "type" = \'story\' ORDER BY score DESC NULLS LAST LIMIT ?',
         [limit],
@@ -42,8 +26,8 @@ def trending(limit: int = 30) -> list[StoryResponse]:
 
 
 @router.get("/{story_id}", response_model=StoryResponse)
-def get_story(story_id: int) -> StoryResponse:
-    row = _conn().execute(
+def get_story(story_id: int, conn: duckdb.DuckDBPyConnection = Depends(get_db)) -> StoryResponse:
+    row = conn.execute(
         'SELECT id, title, url, score, "by", "time", descendants, "type" '
         "FROM hn_item WHERE id = ?",
         [story_id],
@@ -57,8 +41,10 @@ def get_story(story_id: int) -> StoryResponse:
 
 
 @router.get("/{story_id}/comments", response_model=list[CommentResponse])
-def get_comments(story_id: int, limit: int = 100) -> list[CommentResponse]:
-    rows = _conn().execute(
+def get_comments(
+    story_id: int, limit: int = 100, conn: duckdb.DuckDBPyConnection = Depends(get_db),
+) -> list[CommentResponse]:
+    rows = conn.execute(
         'SELECT id, "by", "text", "time", parent FROM hn_item '
         'WHERE parent = ? AND "type" = \'comment\' ORDER BY "time" ASC LIMIT ?',
         [story_id, limit],

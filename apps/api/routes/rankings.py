@@ -1,18 +1,16 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import duckdb
+from fastapi import APIRouter, Depends
 
-from fastapi import APIRouter
-
-from libs.schemas.api_responses import RollupResponse
-from libs.storage.metric_rollup_repository import MetricRollupRepository
-
-if TYPE_CHECKING:
-    import duckdb
+from apps.api.db import get_db
+from libs.schemas.api_responses import (
+    MetricNodeResponse,
+    RankingEntryResponse,
+    SentimentResponse,
+)
 
 router = APIRouter(prefix="/rankings", tags=["rankings"])
-
-_db_conn: duckdb.DuckDBPyConnection | None = None
 
 _LENS_FIELDS = {
     "top": "presence",
@@ -24,24 +22,32 @@ _LENS_FIELDS = {
 }
 
 
-def set_db(conn: duckdb.DuckDBPyConnection) -> None:
-    global _db_conn  # noqa: PLW0603
-    _db_conn = conn
-
-
-def _conn() -> duckdb.DuckDBPyConnection:
-    if _db_conn is None:
-        raise RuntimeError("Database not initialized")
-    return _db_conn
-
-
-@router.get("", response_model=list[RollupResponse])
+@router.get("", response_model=list[RankingEntryResponse])
 def get_rankings(
     window: str = "today",
     lens: str = "top",
     limit: int = 20,
-) -> list[RollupResponse]:
+    conn: duckdb.DuckDBPyConnection = Depends(get_db),
+) -> list[RankingEntryResponse]:
     field = _LENS_FIELDS.get(lens, "presence")
-    repo = MetricRollupRepository(_conn())
-    rollups = repo.get_top_by_field(window, field, limit)
-    return [RollupResponse(**r.model_dump()) for r in rollups]
+    rows = conn.execute(
+        "SELECT r.node_id, m.label, m.definition, "
+        "r.presence, r.valence_score, r.heat_score, r.momentum, "
+        "r.sentiment_positive, r.sentiment_negative, r.sentiment_neutral "
+        "FROM metric_rollup r "
+        "JOIN metric_node m ON r.node_id = m.node_id "
+        f'WHERE r."window" = ? AND m.status = \'active\' '
+        f"ORDER BY r.{field} DESC LIMIT ?",
+        [window, limit],
+    ).fetchall()
+    return [
+        RankingEntryResponse(
+            rank=i + 1,
+            metric=MetricNodeResponse(
+                id=r[0], label=r[1], definition=r[2],
+                presence_pct=r[3] * 100, valence=r[4], heat=r[5], momentum=r[6],
+                sentiment=SentimentResponse(positive=r[7], negative=r[8], neutral=r[9]),
+            ),
+        )
+        for i, r in enumerate(rows)
+    ]

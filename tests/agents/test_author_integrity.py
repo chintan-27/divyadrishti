@@ -29,8 +29,7 @@ def test_update_author_profiles():
     repo.upsert(HNItem(id=3, type="comment", by="alice", author_hash="h2", time=1500))
 
     wrapper = _ConnWrapper(conn)
-    with patch("agents.author_integrity.tasks.duckdb") as mock_duckdb:
-        mock_duckdb.connect.return_value = wrapper
+    with patch("agents.author_integrity.tasks.get_worker_conn", return_value=wrapper):
         count = update_author_profiles()
 
     assert count == 2

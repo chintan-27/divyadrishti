@@ -3,14 +3,10 @@ from __future__ import annotations
 import asyncio
 import time
 
-import duckdb
-
-from agents.celery_app import app
-from agents.config import AgentConfig
+from agents.celery_app import app, get_worker_conn
 from libs.hn_clients.algolia import AlgoliaHNClient
 from libs.schemas.watchlist import WatchlistEntry
 from libs.storage.backfill_state_repository import BackfillStateRepository
-from libs.storage.schema import init_schema
 from libs.storage.watchlist_repository import WatchlistRepository
 
 _DAY_SECS = 86400
@@ -30,9 +26,7 @@ async def _search_by_date(
 @app.task(name="trend_scout.backfill_stories")
 def backfill_stories() -> int:
     """Backfill historical stories from Algolia in daily chunks."""
-    config = AgentConfig()
-    conn = duckdb.connect(config.db_path)
-    init_schema(conn)
+    conn = get_worker_conn()
     state_repo = BackfillStateRepository(conn)
     watchlist = WatchlistRepository(conn)
 

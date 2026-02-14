@@ -33,10 +33,9 @@ def test_map_items_to_metrics():
 
     wrapper = _ConnWrapper(conn)
     with (
-        patch("agents.metric_mapper.tasks.duckdb") as mock_duckdb,
+        patch("agents.metric_mapper.tasks.get_worker_conn", return_value=wrapper),
         patch("agents.metric_mapper.tasks.get_model", return_value=mock_model),
     ):
-        mock_duckdb.connect.return_value = wrapper
         count = map_items_to_metrics()
 
     assert count == 2
@@ -64,10 +63,9 @@ def test_map_items_no_centroids():
 
     wrapper = _ConnWrapper(conn)
     with (
-        patch("agents.metric_mapper.tasks.duckdb") as mock_duckdb,
+        patch("agents.metric_mapper.tasks.get_worker_conn", return_value=wrapper),
         patch("agents.metric_mapper.tasks.get_model", return_value=mock_model),
     ):
-        mock_duckdb.connect.return_value = wrapper
         count = map_items_to_metrics()
 
     assert count == 1

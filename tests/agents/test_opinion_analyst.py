@@ -29,10 +29,9 @@ def test_analyze_opinions():
 
     wrapper = _ConnWrapper(conn)
     with (
-        patch("agents.opinion_analyst.tasks.duckdb") as mock_duckdb,
+        patch("agents.opinion_analyst.tasks.get_worker_conn", return_value=wrapper),
         patch("agents.opinion_analyst.tasks.get_model", return_value=mock_model),
     ):
-        mock_duckdb.connect.return_value = wrapper
         count = analyze_opinions()
 
     assert count == 2
@@ -58,8 +57,7 @@ def test_analyze_opinions_skips_already_analyzed():
     sig_repo.upsert(OpinionSignal(item_id=1, valence=50.0, label="positive"))
 
     wrapper = _ConnWrapper(conn)
-    with patch("agents.opinion_analyst.tasks.duckdb") as mock_duckdb:
-        mock_duckdb.connect.return_value = wrapper
+    with patch("agents.opinion_analyst.tasks.get_worker_conn", return_value=wrapper):
         count = analyze_opinions()
 
     assert count == 0
