@@ -1,34 +1,34 @@
 from __future__ import annotations
 
+import json
+
+from libs.nlp.navigator import get_client, get_opinion_model
 from libs.schemas.opinion_signal import OpinionSignal
 
-_MODEL_NAME = "cardiffnlp/twitter-roberta-base-sentiment-latest"
-_MODEL_VERSION = "twitter-roberta-base-sentiment-latest"
+_MODEL_VERSION = "navigator-llama-3.3-70b"
 
-_LABEL_MAP = {
-    "positive": "positive",
-    "negative": "negative",
-    "neutral": "neutral",
-}
+_SYSTEM_PROMPT = """\
+You are a sentiment analysis model calibrated for Hacker News tech discourse.
+For each text, output a JSON object with these fields:
+- "label": one of "positive", "negative", or "neutral"
+- "valence": float from -100 to +100 (negative=critical, positive=enthusiastic, 0=neutral)
+- "intensity": float from 0 to 1 (how emotionally charged the text is)
+- "confidence": float from 0 to 1 (how certain you are about the label)
 
-_VALENCE_MAP = {
-    "positive": 1.0,
-    "negative": -1.0,
-    "neutral": 0.0,
-}
+HN-specific calibration:
+- Technical criticism ("this approach is fundamentally flawed") = negative, high intensity
+- Dry humor or sarcasm = adjust valence accordingly
+- Factual statements without opinion = neutral, low intensity
+- Enthusiasm about technology = positive, moderate intensity
+
+Output ONLY a JSON array of objects, one per input text. No other text."""
 
 _model: SentimentModel | None = None
 
 
 class SentimentModel:
     def __init__(self) -> None:
-        from transformers import AutoModelForSequenceClassification, AutoTokenizer
-        import torch
-
-        self._tokenizer = AutoTokenizer.from_pretrained(_MODEL_NAME)
-        self._model = AutoModelForSequenceClassification.from_pretrained(_MODEL_NAME)
-        self._model.eval()
-        self._torch = torch
+        self._client = get_client()
 
     def predict(self, text: str) -> OpinionSignal:
         """Predict sentiment for a single text."""
@@ -36,34 +36,36 @@ class SentimentModel:
 
     def predict_batch(self, texts: list[str]) -> list[OpinionSignal]:
         """Predict sentiment for a batch of texts."""
-        torch = self._torch
-        inputs = self._tokenizer(
-            texts, return_tensors="pt", truncation=True,
-            padding=True, max_length=512,
+        numbered = "\n".join(f"[{i}] {t[:500]}" for i, t in enumerate(texts))
+        response = self._client.chat.completions.create(
+            model=get_opinion_model(),
+            messages=[
+                {"role": "system", "content": _SYSTEM_PROMPT},
+                {"role": "user", "content": numbered},
+            ],
+            temperature=0.1,
+            response_format={"type": "json_object"},
         )
-        with torch.no_grad():
-            outputs = self._model(**inputs)
-        probs = torch.nn.functional.softmax(outputs.logits, dim=-1)
+        raw = response.choices[0].message.content or "[]"
+        parsed = json.loads(raw)
 
-        # Model labels: 0=negative, 1=neutral, 2=positive
-        label_names = ["negative", "neutral", "positive"]
+        # Handle both {"results": [...]} and [...] formats
+        if isinstance(parsed, dict):
+            parsed = parsed.get("results", parsed.get("data", []))
+
         signals: list[OpinionSignal] = []
-
-        for i in range(len(texts)):
-            prob_vec = probs[i]
-            top_idx = int(torch.argmax(prob_vec).item())
-            label = label_names[top_idx]
-            confidence = float(prob_vec[top_idx].item())
-            valence_dir = _VALENCE_MAP.get(label, 0.0)
-            valence = valence_dir * confidence * 100
-            intensity = float(max(prob_vec[0].item(), prob_vec[2].item()))
+        for i, text in enumerate(texts):
+            if i < len(parsed):
+                entry = parsed[i]
+            else:
+                entry = {"label": "neutral", "valence": 0.0, "intensity": 0.0, "confidence": 0.5}
 
             signals.append(OpinionSignal(
                 item_id=0,
-                valence=round(valence, 2),
-                intensity=round(intensity, 4),
-                confidence=round(confidence, 4),
-                label=label,
+                valence=round(float(entry.get("valence", 0.0)), 2),
+                intensity=round(float(entry.get("intensity", 0.0)), 4),
+                confidence=round(float(entry.get("confidence", 0.5)), 4),
+                label=entry.get("label", "neutral"),
                 model_version=_MODEL_VERSION,
             ))
 

@@ -7,7 +7,7 @@ from libs.schemas.metric_node import MetricNode
 from libs.schemas.metric_rollup import MetricRollup
 from libs.storage.metric_node_repository import MetricNodeRepository
 from libs.storage.metric_rollup_repository import MetricRollupRepository
-from libs.storage.schema import init_schema
+from libs.storage.schema import EMBEDDING_DIM, init_schema
 
 
 def _setup():
@@ -28,8 +28,8 @@ def test_rankings_empty():
 def test_rankings_top():
     conn, client = _setup()
     node_repo = MetricNodeRepository(conn)
-    node_repo.upsert(MetricNode(node_id="n1", label="AI", centroid=[0.1] * 384))
-    node_repo.upsert(MetricNode(node_id="n2", label="Rust", centroid=[0.2] * 384))
+    node_repo.upsert(MetricNode(node_id="n1", label="AI", centroid=[0.1] * EMBEDDING_DIM))
+    node_repo.upsert(MetricNode(node_id="n2", label="Rust", centroid=[0.2] * EMBEDDING_DIM))
     repo = MetricRollupRepository(conn)
     repo.upsert(MetricRollup(
         node_id="n1", window="today", bucket_start=1000,
@@ -50,8 +50,8 @@ def test_rankings_top():
 def test_rankings_heated():
     conn, client = _setup()
     node_repo = MetricNodeRepository(conn)
-    node_repo.upsert(MetricNode(node_id="n1", label="AI", centroid=[0.1] * 384))
-    node_repo.upsert(MetricNode(node_id="n2", label="Rust", centroid=[0.2] * 384))
+    node_repo.upsert(MetricNode(node_id="n1", label="AI", centroid=[0.1] * EMBEDDING_DIM))
+    node_repo.upsert(MetricNode(node_id="n2", label="Rust", centroid=[0.2] * EMBEDDING_DIM))
     repo = MetricRollupRepository(conn)
     repo.upsert(MetricRollup(
         node_id="n1", window="today", bucket_start=1000, heat_score=10.0,

@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import math
-
 import numpy as np
 
-_MODEL_NAME = "all-MiniLM-L6-v2"
+from libs.nlp.navigator import get_client, get_embedding_model
+from libs.storage.schema import EMBEDDING_DIM
+
 _model: EmbeddingModel | None = None
 
 
@@ -33,18 +33,20 @@ def softmax_weights(similarities: list[float], temperature: float = 1.0) -> list
 
 class EmbeddingModel:
     def __init__(self) -> None:
-        from sentence_transformers import SentenceTransformer
-        self._model = SentenceTransformer(_MODEL_NAME)
+        self._client = get_client()
 
     def encode(self, text: str) -> list[float]:
-        """Encode a single text to a 384-dim vector."""
-        vec = self._model.encode(text, convert_to_numpy=True)
-        return vec.tolist()  # type: ignore[union-attr]
+        """Encode a single text to a 1024-dim vector."""
+        return self.encode_batch([text])[0]
 
     def encode_batch(self, texts: list[str]) -> list[list[float]]:
         """Encode a batch of texts."""
-        vecs = self._model.encode(texts, convert_to_numpy=True)
-        return [v.tolist() for v in vecs]  # type: ignore[union-attr]
+        response = self._client.embeddings.create(
+            model=get_embedding_model(),
+            input=texts,
+            dimensions=EMBEDDING_DIM,
+        )
+        return [item.embedding for item in response.data]
 
 
 def get_model() -> EmbeddingModel:

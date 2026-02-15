@@ -45,7 +45,7 @@ def _build_schedule() -> list[tuple[str, callable, float]]:
     tasks.append(("map_items_to_metrics", map_items_to_metrics, 20))
 
     from agents.metric_gardener.tasks import garden_metrics
-    tasks.append(("garden_metrics", garden_metrics, 3600))
+    tasks.append(("garden_metrics", garden_metrics, 120))
 
     from agents.rollup_accountant.tasks import compute_rollups
     tasks.append(("compute_rollups", compute_rollups, 45))

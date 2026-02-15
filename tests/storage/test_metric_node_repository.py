@@ -2,7 +2,7 @@ import duckdb
 
 from libs.schemas.metric_node import MetricNode
 from libs.storage.metric_node_repository import MetricNodeRepository
-from libs.storage.schema import init_schema
+from libs.storage.schema import EMBEDDING_DIM, init_schema
 
 
 def _setup() -> tuple[duckdb.DuckDBPyConnection, MetricNodeRepository]:
@@ -13,13 +13,13 @@ def _setup() -> tuple[duckdb.DuckDBPyConnection, MetricNodeRepository]:
 
 def test_upsert_and_get():
     conn, repo = _setup()
-    centroid = [0.5] * 384
+    centroid = [0.5] * EMBEDDING_DIM
     node = MetricNode(node_id="n1", label="AI Safety", centroid=centroid)
     repo.upsert(node)
     result = repo.get_by_id("n1")
     assert result is not None
     assert result.label == "AI Safety"
-    assert len(result.centroid) == 384
+    assert len(result.centroid) == EMBEDDING_DIM
     conn.close()
 
 
@@ -35,8 +35,8 @@ def test_get_active():
 
 def test_get_all_centroids():
     conn, repo = _setup()
-    c1 = [1.0] * 384
-    c2 = [2.0] * 384
+    c1 = [1.0] * EMBEDDING_DIM
+    c2 = [2.0] * EMBEDDING_DIM
     repo.upsert(MetricNode(node_id="n1", centroid=c1))
     repo.upsert(MetricNode(node_id="n2", centroid=c2, status="inactive"))
     centroids = repo.get_all_centroids()

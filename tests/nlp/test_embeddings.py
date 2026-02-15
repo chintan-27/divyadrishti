@@ -1,6 +1,7 @@
 import pytest
 
 from libs.nlp.embeddings import cosine_similarity, softmax_weights
+from libs.storage.schema import EMBEDDING_DIM
 
 
 def test_cosine_similarity_identical():
@@ -46,7 +47,7 @@ def test_encode():
     from libs.nlp.embeddings import get_model
     model = get_model()
     vec = model.encode("hello world")
-    assert len(vec) == 384
+    assert len(vec) == EMBEDDING_DIM
     assert isinstance(vec[0], float)
 
 
@@ -56,7 +57,7 @@ def test_encode_batch():
     model = get_model()
     vecs = model.encode_batch(["hello", "world"])
     assert len(vecs) == 2
-    assert len(vecs[0]) == 384
+    assert len(vecs[0]) == EMBEDDING_DIM
 
 
 @pytest.mark.slow

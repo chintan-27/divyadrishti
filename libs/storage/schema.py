@@ -1,5 +1,7 @@
 import duckdb
 
+EMBEDDING_DIM = 1024
+
 _HN_ITEM_DDL = """
 CREATE TABLE IF NOT EXISTS hn_item (
     id INTEGER PRIMARY KEY,
@@ -72,24 +74,24 @@ CREATE TABLE IF NOT EXISTS opinion_signal (
 """
 
 
-_EMBEDDING_DDL = """
+_EMBEDDING_DDL = f"""
 CREATE TABLE IF NOT EXISTS embedding (
     item_id INTEGER PRIMARY KEY,
-    embedding FLOAT[384],
+    embedding FLOAT[{EMBEDDING_DIM}],
     model_version VARCHAR DEFAULT ''
 );
 """
 
-_METRIC_NODE_DDL = """
+_METRIC_NODE_DDL = f"""
 CREATE TABLE IF NOT EXISTS metric_node (
     node_id VARCHAR PRIMARY KEY,
     label VARCHAR DEFAULT '',
     definition VARCHAR DEFAULT '',
-    centroid FLOAT[384],
+    centroid FLOAT[{EMBEDDING_DIM}],
     parent_id VARCHAR,
     status VARCHAR DEFAULT 'active',
     version INTEGER DEFAULT 1,
-    health_stats VARCHAR DEFAULT '{}'
+    health_stats VARCHAR DEFAULT '{{}}'
 );
 
 CREATE INDEX IF NOT EXISTS idx_metric_node_status ON metric_node (status);
@@ -142,6 +144,37 @@ CREATE TABLE IF NOT EXISTS backfill_state (
 """
 
 
+_VECTOR_TABLES = ["embedding", "metric_node", "item_metric_edge", "metric_rollup"]
+
+
+def migrate_embedding_dimension(conn: duckdb.DuckDBPyConnection) -> None:
+    """Drop and re-create vector-dependent tables for new embedding dimension."""
+    for table in _VECTOR_TABLES:
+        conn.execute(f"DROP TABLE IF EXISTS {table}")
+    conn.execute(_EMBEDDING_DDL)
+    conn.execute(_METRIC_NODE_DDL)
+    conn.execute(_ITEM_METRIC_EDGE_DDL)
+    conn.execute(_METRIC_ROLLUP_DDL)
+
+
+def _get_embedding_dim(conn: duckdb.DuckDBPyConnection) -> int | None:
+    """Return the current embedding column array size, or None if table doesn't exist."""
+    try:
+        row = conn.execute(
+            "SELECT data_type FROM information_schema.columns "
+            "WHERE table_name = 'embedding' AND column_name = 'embedding'"
+        ).fetchone()
+        if row is None:
+            return None
+        # data_type looks like 'FLOAT[384]' or 'FLOAT[1024]'
+        dtype = row[0]
+        start = dtype.index("[") + 1
+        end = dtype.index("]")
+        return int(dtype[start:end])
+    except Exception:
+        return None
+
+
 def init_schema(conn: duckdb.DuckDBPyConnection) -> None:
     """Create all tables and indexes if they don't exist."""
     conn.execute(_HN_ITEM_DDL)
@@ -149,8 +182,15 @@ def init_schema(conn: duckdb.DuckDBPyConnection) -> None:
     conn.execute(_AUTHOR_PROFILE_DDL)
     conn.execute(_MODERATION_FLAG_DDL)
     conn.execute(_OPINION_SIGNAL_DDL)
-    conn.execute(_EMBEDDING_DDL)
-    conn.execute(_METRIC_NODE_DDL)
-    conn.execute(_ITEM_METRIC_EDGE_DDL)
-    conn.execute(_METRIC_ROLLUP_DDL)
+
+    # Check if embedding dimension needs migration
+    current_dim = _get_embedding_dim(conn)
+    if current_dim is not None and current_dim != EMBEDDING_DIM:
+        migrate_embedding_dimension(conn)
+    else:
+        conn.execute(_EMBEDDING_DDL)
+        conn.execute(_METRIC_NODE_DDL)
+        conn.execute(_ITEM_METRIC_EDGE_DDL)
+        conn.execute(_METRIC_ROLLUP_DDL)
+
     conn.execute(_BACKFILL_STATE_DDL)

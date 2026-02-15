@@ -13,7 +13,7 @@ from libs.storage.item_metric_edge_repository import ItemMetricEdgeRepository
 from libs.storage.metric_node_repository import MetricNodeRepository
 from libs.storage.metric_rollup_repository import MetricRollupRepository
 from libs.storage.opinion_signal_repository import OpinionSignalRepository
-from libs.storage.schema import init_schema
+from libs.storage.schema import EMBEDDING_DIM, init_schema
 from tests.agents.test_normalizer import _ConnWrapper
 
 
@@ -28,7 +28,7 @@ def test_compute_rollups():
     node_repo = MetricNodeRepository(conn)
 
     # create a metric node
-    node_repo.upsert(MetricNode(node_id="n1", label="Test", centroid=[0.1] * 384))
+    node_repo.upsert(MetricNode(node_id="n1", label="Test", centroid=[0.1] * EMBEDDING_DIM))
 
     # create items with different authors and recent timestamps
     for i in range(1, 6):

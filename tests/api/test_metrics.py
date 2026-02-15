@@ -9,7 +9,7 @@ from libs.schemas.metric_node import MetricNode
 from libs.storage.hn_item_repository import HNItemRepository
 from libs.storage.item_metric_edge_repository import ItemMetricEdgeRepository
 from libs.storage.metric_node_repository import MetricNodeRepository
-from libs.storage.schema import init_schema
+from libs.storage.schema import EMBEDDING_DIM, init_schema
 
 
 def _setup():
@@ -30,8 +30,8 @@ def test_top_metrics_empty():
 def test_top_metrics():
     conn, client = _setup()
     node_repo = MetricNodeRepository(conn)
-    node_repo.upsert(MetricNode(node_id="n1", label="AI", centroid=[0.1] * 384))
-    node_repo.upsert(MetricNode(node_id="n2", label="Rust", centroid=[0.2] * 384))
+    node_repo.upsert(MetricNode(node_id="n1", label="AI", centroid=[0.1] * EMBEDDING_DIM))
+    node_repo.upsert(MetricNode(node_id="n2", label="Rust", centroid=[0.2] * EMBEDDING_DIM))
 
     edge_repo = ItemMetricEdgeRepository(conn)
     item_repo = HNItemRepository(conn)
@@ -53,7 +53,7 @@ def test_top_metrics():
 def test_get_metric():
     conn, client = _setup()
     node_repo = MetricNodeRepository(conn)
-    node_repo.upsert(MetricNode(node_id="n1", label="AI", centroid=[0.1] * 384))
+    node_repo.upsert(MetricNode(node_id="n1", label="AI", centroid=[0.1] * EMBEDDING_DIM))
     resp = client.get("/metrics/n1")
     assert resp.status_code == 200
     assert resp.json()["label"] == "AI"
@@ -70,7 +70,7 @@ def test_get_metric_not_found():
 def test_get_metric_examples():
     conn, client = _setup()
     node_repo = MetricNodeRepository(conn)
-    node_repo.upsert(MetricNode(node_id="n1", label="AI", centroid=[0.1] * 384))
+    node_repo.upsert(MetricNode(node_id="n1", label="AI", centroid=[0.1] * EMBEDDING_DIM))
     item_repo = HNItemRepository(conn)
     item_repo.upsert(HNItem(id=1, type="story", title="AI News", text_clean="about AI"))
     edge_repo = ItemMetricEdgeRepository(conn)

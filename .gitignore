@@ -211,3 +211,5 @@ run.sh
 *.db
 *.duckdb
 *.rdb
+*.wal
+out.txt

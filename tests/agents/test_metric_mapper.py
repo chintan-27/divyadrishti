@@ -9,7 +9,7 @@ from libs.storage.embedding_repository import EmbeddingRepository
 from libs.storage.hn_item_repository import HNItemRepository
 from libs.storage.item_metric_edge_repository import ItemMetricEdgeRepository
 from libs.storage.metric_node_repository import MetricNodeRepository
-from libs.storage.schema import init_schema
+from libs.storage.schema import EMBEDDING_DIM, init_schema
 from tests.agents.test_normalizer import _ConnWrapper
 
 
@@ -22,13 +22,13 @@ def test_map_items_to_metrics():
 
     # add metric nodes with centroids
     node_repo = MetricNodeRepository(conn)
-    node_repo.upsert(MetricNode(node_id="n1", label="AI", centroid=[0.5] * 384))
-    node_repo.upsert(MetricNode(node_id="n2", label="Programming", centroid=[0.3] * 384))
+    node_repo.upsert(MetricNode(node_id="n1", label="AI", centroid=[0.5] * EMBEDDING_DIM))
+    node_repo.upsert(MetricNode(node_id="n2", label="Programming", centroid=[0.3] * EMBEDDING_DIM))
 
     mock_model = MagicMock()
     mock_model.encode_batch.return_value = [
-        [0.5] * 384,  # similar to n1
-        [0.3] * 384,  # similar to n2
+        [0.5] * EMBEDDING_DIM,  # similar to n1
+        [0.3] * EMBEDDING_DIM,  # similar to n2
     ]
 
     wrapper = _ConnWrapper(conn)
@@ -59,7 +59,7 @@ def test_map_items_no_centroids():
     repo.upsert(HNItem(id=1, type="comment", text_clean="hello world"))
 
     mock_model = MagicMock()
-    mock_model.encode_batch.return_value = [[0.1] * 384]
+    mock_model.encode_batch.return_value = [[0.1] * EMBEDDING_DIM]
 
     wrapper = _ConnWrapper(conn)
     with (

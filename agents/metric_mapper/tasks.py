@@ -4,6 +4,7 @@ import time
 
 from agents.celery_app import app, get_worker_conn
 from libs.nlp.embeddings import cosine_similarity, get_model, softmax_weights
+from libs.nlp.navigator import get_embedding_model
 from libs.schemas.embedding import Embedding
 from libs.schemas.item_metric_edge import ItemMetricEdge
 from libs.storage.embedding_repository import EmbeddingRepository
@@ -47,7 +48,8 @@ def map_items_to_metrics(batch_size: int = 50) -> int:
 
         for item_id, vec in zip(item_ids, vectors):
             emb_repo.upsert(Embedding(
-                item_id=item_id, embedding=vec, model_version="all-MiniLM-L6-v2",
+                item_id=item_id, embedding=vec,
+                model_version=get_embedding_model(),
             ))
 
             if not centroids:
