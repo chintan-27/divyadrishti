@@ -71,13 +71,13 @@ export default function RankingsPage() {
         </p>
       ) : (
         <div className="space-y-3">
-          {entries.map((entry) => (
+          {entries.map((entry, i) => (
             <div key={entry.metric.id} className="flex items-start gap-4">
-              <span className="mt-5 w-8 shrink-0 text-right text-lg font-bold text-gray-600">
+              <span className="mt-5 w-8 shrink-0 text-right text-xl font-bold tabular-nums text-gray-700">
                 {entry.rank}
               </span>
               <div className="flex-1">
-                <MetricCard metric={entry.metric} />
+                <MetricCard metric={entry.metric} index={i} />
               </div>
             </div>
           ))}

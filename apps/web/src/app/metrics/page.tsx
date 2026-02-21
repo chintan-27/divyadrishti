@@ -41,8 +41,8 @@ export default function MetricsPage() {
         </span>
       </div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {metrics.map((metric) => (
-          <MetricCard key={metric.id} metric={metric} />
+        {metrics.map((metric, i) => (
+          <MetricCard key={metric.id} metric={metric} index={i} />
         ))}
       </div>
       {metrics.length === 0 && (

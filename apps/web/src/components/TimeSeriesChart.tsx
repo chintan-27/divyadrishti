@@ -11,7 +11,7 @@ import {
 } from "recharts";
 
 interface TimeSeriesChartProps {
-  data: Record<string, unknown>[];
+  data: object[];
   field: string;
   color?: string;
   height?: number;
