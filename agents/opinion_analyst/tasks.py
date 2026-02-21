@@ -1,9 +1,14 @@
 from __future__ import annotations
 
+import time
+
 from agents.celery_app import app, get_worker_conn
 from libs.nlp.sentiment import get_model
 from libs.schemas.opinion_signal import OpinionSignal
 from libs.storage.opinion_signal_repository import OpinionSignalRepository
+
+# Only analyze items within the month rollup window — older items can't affect metrics
+_MAX_AGE_SECS = 30 * 86400
 
 
 @app.task(name="opinion_analyst.analyze_opinions")
@@ -13,12 +18,14 @@ def analyze_opinions(batch_size: int = 50) -> int:
     repo = OpinionSignalRepository(conn)
 
     try:
+        cutoff = int(time.time()) - _MAX_AGE_SECS
         rows = conn.execute(
             "SELECT h.id, h.text_clean FROM hn_item h "
             "LEFT JOIN opinion_signal o ON h.id = o.item_id "
-            "WHERE h.text_clean IS NOT NULL AND o.item_id IS NULL "
+            'WHERE h.text_clean IS NOT NULL AND o.item_id IS NULL AND h."time" >= ? '
+            'ORDER BY h."time" DESC '
             "LIMIT ?",
-            [batch_size],
+            [cutoff, batch_size],
         ).fetchall()
 
         if not rows:

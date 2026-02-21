@@ -44,14 +44,18 @@ class SentimentModel:
                 {"role": "user", "content": numbered},
             ],
             temperature=0.1,
-            response_format={"type": "json_object"},
         )
         raw = response.choices[0].message.content or "[]"
         parsed = json.loads(raw)
 
         # Handle both {"results": [...]} and [...] formats
         if isinstance(parsed, dict):
-            parsed = parsed.get("results", parsed.get("data", []))
+            for key in ("results", "data", "sentiments", "output", "outputs", "items"):
+                if key in parsed:
+                    parsed = parsed[key]
+                    break
+            else:
+                parsed = list(parsed.values())[0] if parsed else []
 
         signals: list[OpinionSignal] = []
         for i, text in enumerate(texts):
